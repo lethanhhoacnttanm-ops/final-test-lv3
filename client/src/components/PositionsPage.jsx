@@ -26,14 +26,12 @@ import axios from 'axios';
 const { Title, Text, Paragraph } = Typography;
 
 export default function PositionsPage() {
-  // Logic cũ của Listteacherposition.jsx đưa vào state mới
   const [positions, setPositions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
 
-  // Logic cũ: Gọi API lấy danh sách vị trí công tác bằng Axios
   const fetchPositions = useCallback(async () => {
     setLoading(true);
     try {
@@ -53,16 +51,14 @@ export default function PositionsPage() {
     fetchPositions();
   }, [fetchPositions]);
 
-  // Logic cũ của NewPosition.jsx đưa vào xử lý Form khi submit tạo mới
   const handleCreate = async (values) => {
     setSubmitting(true);
     
-    // Khớp cấu trúc dữ liệu chuẩn theo logic cũ và backend yêu cầu
     const dataPost = {
       code: values.code,
       name: values.name,
       description: values.description || '',
-      active: true // Mặc định trạng thái kích hoạt giống hàm btnActive cũ
+      active: true 
     };
 
     try {
@@ -70,7 +66,7 @@ export default function PositionsPage() {
       message.success('Tạo vị trí công tác thành công');
       setModalOpen(false);
       form.resetFields();
-      fetchPositions(); // Tải lại danh sách sau khi thêm thành công
+      fetchPositions(); 
     } catch (error) {
       console.error("Lỗi từ server:", error.response?.data || error.message);
       message.error('Không thể tạo vị trí công tác mới');
@@ -79,7 +75,6 @@ export default function PositionsPage() {
     }
   };
 
-  // Định nghĩa các cột hiển thị trong Table (Đổi rowKey thành _id của MongoDB từ API cũ)
   const columns = [
     {
       title: 'Mã vị trí',
@@ -162,7 +157,7 @@ export default function PositionsPage() {
           <Table
             columns={columns}
             dataSource={positions}
-            rowKey="_id" // Đổi từ id sang _id cho khớp MongoDB API của bạn
+            rowKey="_id"
             pagination={{
               pageSize: 10,
               showSizeChanger: true,

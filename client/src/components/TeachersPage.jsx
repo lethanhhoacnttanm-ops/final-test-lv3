@@ -99,9 +99,8 @@ export default function TeachersPage() {
   const handleCreate = async (values) => {
     setSubmitting(true);
     
-    // Tạo cấu trúc data giống với yêu cầu của backend cũ (gồm object degrees lồng trong)
     const dataPost = {
-      code: `GV${Math.floor(1000 + Math.random() * 9000)}`, // Tự sinh mã GV ngẫu nhiên nếu backend yêu cầu
+      code: `GV${Math.floor(1000 + Math.random() * 9000)}`, 
       userDetail: {
         name: values.name,
         email: values.email,
@@ -114,7 +113,7 @@ export default function TeachersPage() {
         {
           type: values.education_level || '',
           major: values.education_school || '',
-          isGraduated: true // Default true như hàm btnGraduated cũ
+          isGraduated: true 
         }
       ]
     };
@@ -124,7 +123,6 @@ export default function TeachersPage() {
       message.success('Thêm giáo viên thành công');
       setModalOpen(false);
       form.resetFields();
-      // Reset về trang 1 và tải lại danh sách
       fetchTeachersData(1, pagination.pageSize);
     } catch (error) {
       console.error("Lỗi từ server:", error.response?.data || error.message);
@@ -134,7 +132,6 @@ export default function TeachersPage() {
     }
   };
 
-  // Cấu hình lại các cột hiển thị mapping dữ liệu chuẩn theo object cũ (userDetail, degrees)
   const columns = [
     {
       title: 'Mã GV',
@@ -210,7 +207,6 @@ export default function TeachersPage() {
       key: 'position',
       width: 160,
       render: (_, record) => {
-        // Tìm tên vị trí công tác tương ứng dựa trên ID lưu trong mảng teacherPositions[0] giống code cũ
         const currentPosId = record.teacherPositions?.[0];
         const currentPos = positions.find(item => item._id === currentPosId);
         return currentPos ? (
@@ -301,14 +297,14 @@ export default function TeachersPage() {
           <Table
             columns={columns}
             dataSource={dataSource}
-            rowKey="_id" // Sử dụng _id của MongoDB từ API cũ làm key
+            rowKey="_id"
             pagination={{
               current: pagination.current,
               pageSize: pagination.pageSize,
               total: pagination.total,
               showSizeChanger: true,
               showQuickJumper: true,
-              pageSizeOptions: ['4', '10', '20', '50'], // Cho chọn pageSize 4 mặc định như cũ
+              pageSizeOptions: ['4', '10', '20', '50'], 
               showTotal: (total) => `Tổng ${total} giáo viên`,
             }}
             onChange={handleTableChange}
