@@ -1,0 +1,5 @@
+
+node_modules/
+dist/
+.env
+echo "*.mp4" >> .gitignore
