@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
+  Avatar,
   Table,
   Button,
   Space,
@@ -17,6 +18,10 @@ import {
   Col,
 } from 'antd';
 import {
+  DeleteOutlined,
+  ApartmentOutlined,
+  IdcardOutlined,
+  EditOutlined,
   PlusOutlined,
   ReloadOutlined,
   UserOutlined,
@@ -30,7 +35,7 @@ import {
 } from '@ant-design/icons';
 import axios from 'axios';
 
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 
 export default function TeachersPage() {
@@ -41,10 +46,10 @@ export default function TeachersPage() {
   const [globalActiveCount, setGlobalActiveCount] = useState(0);
   const [globalInactiveCount, setGlobalInactiveCount] = useState(0);
   const [loading, setLoading] = useState(false);
-  
+
   const [pagination, setPagination] = useState({
     current: 1,
-    pageSize: 4, 
+    pageSize: 4,
     total: 0,
   });
 
@@ -98,9 +103,9 @@ export default function TeachersPage() {
 
   const handleCreate = async (values) => {
     setSubmitting(true);
-    
+
     const dataPost = {
-      code: `GV${Math.floor(1000 + Math.random() * 9000)}`, 
+      code: `GV${Math.floor(1000 + Math.random() * 9000)}`,
       userDetail: {
         name: values.name,
         email: values.email,
@@ -113,7 +118,7 @@ export default function TeachersPage() {
         {
           type: values.education_level || '',
           major: values.education_school || '',
-          isGraduated: true 
+          isGraduated: true
         }
       ]
     };
@@ -132,6 +137,22 @@ export default function TeachersPage() {
     }
   };
 
+  const getDegreeConfig = (degreeType) => {
+    const type = degreeType?.toLowerCase() || '';
+
+    if (type.includes('cử nhân') || type.includes('bachelor')) {
+      return { color: 'cyan', text: 'Cử nhân' };
+    }
+    if (type.includes('thạc sĩ') || type.includes('master')) {
+      return { color: 'blue', text: 'Thạc sĩ' };
+    }
+    if (type.includes('tiến sĩ') || type.includes('giáo sư') || type.includes('doctor') || type.includes('prof')) {
+      return { color: 'purple', text: 'Tiến sĩ / Giáo sư' };
+    }
+
+    return { color: 'default', text: degreeType || 'Chưa cập nhật' };
+  };
+
   const columns = [
     {
       title: 'Mã GV',
@@ -139,130 +160,136 @@ export default function TeachersPage() {
       key: 'code',
       width: 120,
       render: (code) => (
-        <Tag color="blue" className="font-mono">
+        <Tag color="purple" className="font-mono font-medium">
           {code || 'N/A'}
         </Tag>
       ),
     },
     {
-      title: 'Họ và tên',
-      key: 'name',
-      width: 180,
-      render: (_, record) => (
+      title: 'Giáo viên',
+      dataIndex: 'teacherInfo',
+      key: 'teacherInfo',
+      width: 280,
+      render: (_, record) => {
+        const user = record.userDetail
+        return (
+          <Space align="start" size="middle">
+            <Avatar
+              src={record.avatar}
+              icon={<UserOutlined />}
+              size={48}
+              className="shadow-sm"
+            />
+            <Space orientation="vertical" size={2} className="w-full">
+              <Text strong className="text-base block">{user.name || 'Chưa cập nhật'}</Text>
+              <Text type="secondary" size="small" className="block text-xs">
+                <MailOutlined className="mr-1" /> {user.email || '-'}
+              </Text>
+              <Text type="secondary" size="small" className="block text-xs">
+                <IdcardOutlined className="mr-1" /> {user.identity || '-'}
+              </Text>
+            </Space>
+          </Space>
+        )
+      }
+    },
+    {
+      title: 'Trình độ (Cao nhất)',
+      dataIndex: 'qualification',
+      key: 'qualification',
+      width: 200,
+      render: (_, record) => {
+
+        const degree = record.degrees?.[0]
+
+        const degreeConfig = getDegreeConfig(degree.type.toLowerCase());
+
+        return (
+          <Space orientation="vertical" size={2}>
+            <Tag color={degreeConfig.color} className="m-0 font-semibold tracking-wide rounded-md px-2 py-0.5 border-opacity-50">
+              {degreeConfig.text}
+            </Tag>
+            <Text type="secondary" size="small" className="italic text-xs block">
+              Chuyên ngành: {degree.major || '-'}
+            </Text>
+          </Space>
+        )
+      }
+    },
+    {
+      title: 'Bộ môn',
+      dataIndex: 'department',
+      key: 'department',
+      width: 150,
+      render: (department) => (
         <Space>
-          <UserOutlined className="text-gray-400" />
-          <Text strong>{record.userDetail?.name || 'Chưa cập nhật'}</Text>
+          <ApartmentOutlined className="text-gray-400" />
+          <Text>{department || 'N/A'}</Text>
         </Space>
       ),
     },
     {
-      title: 'Email',
-      key: 'email',
-      width: 200,
-      render: (_, record) => {
-        const email = record.userDetail?.email || record.email;
-        return email ? (
-          <Space>
-            <MailOutlined className="text-gray-400" />
-            <Text copyable={{ text: email }}>{email}</Text>
-          </Space>
-        ) : (
-          <Text type="secondary">-</Text>
-        );
-      },
-    },
-    {
-      title: 'SĐT',
-      dataIndex: 'phone',
-      key: 'phone',
-      width: 130,
-      render: (phone) =>
-        phone ? (
-          <Space>
-            <PhoneOutlined className="text-gray-400" />
-            <Text>{phone}</Text>
-          </Space>
-        ) : (
-          <Text type="secondary">-</Text>
-        ),
-    },
-    {
-      title: 'Trạng thái',
-      dataIndex: 'isActive',
-      key: 'status',
+      title: 'TT công tác',
+      dataIndex: 'workStatus',
+      key: 'workStatus',
       width: 150,
-      render: (isActive) =>
-        isActive ? (
-          <Tag icon={<CheckCircleOutlined />} color="success">
-            Đang công tác
-          </Tag>
-        ) : (
-          <Tag icon={<CloseCircleOutlined />} color="error">
-            Ngừng công tác
-          </Tag>
-        ),
-    },
-    {
-      title: 'Vị trí công tác',
-      key: 'position',
-      width: 160,
       render: (_, record) => {
-        const currentPosId = record.teacherPositions?.[0];
-        const currentPos = positions.find(item => item._id === currentPosId);
-        return currentPos ? (
-          <Tag color="purple">{currentPos.name}</Tag>
-        ) : (
-          <Text type="secondary">Chưa có chức vụ</Text>
-        );
-      },
-    },
-    {
-      title: 'Trình độ',
-      key: 'education',
-      width: 220,
-      render: (_, record) => {
-        const degree = record.degrees?.[0];
-        if (!degree || (!degree.type && !degree.major)) {
-          return <Text type="secondary">N/A</Text>;
-        }
+
+        const congtac = positions.filter((item) => item._id === record.teacherPositions?.[0])
         return (
-          <Tooltip title={degree.major ? `Trường: ${degree.major}` : null}>
-            <Space orientation="vertical" size={0}>
-              {degree.type && (
-                <Text>
-                  <BookOutlined className="mr-1" />
-                  Bậc: {degree.type}
-                </Text>
-              )}
-              {degree.major && (
-                <Text type="secondary" size="small">
-                  <BankOutlined className="mr-1" />
-                  Ngành: {degree.major}
-                </Text>
-              )}
-            </Space>
-          </Tooltip>
-        );
-      },
+          <Text>{congtac?.[0]?.name || '-'}</Text>
+        )
+      }
     },
     {
       title: 'Địa chỉ',
+      dataIndex: 'address',
       key: 'address',
-      width: 200,
       ellipsis: true,
       render: (_, record) => {
-        const address = record.userDetail?.address;
-        return address ? (
-          <Tooltip title={address}>
-            <Space>
-              <HomeOutlined className="text-gray-400" />
-              <Text ellipsis>{address}</Text>
-            </Space>
+        const user = record.userDetail
+        return (
+          (
+            <Tooltip title={user.email}>
+              <Paragraph ellipsis={{ rows: 2 }} className="m-0 text-sm">
+                {user.email}
+              </Paragraph>
+            </Tooltip>
+          )
+        )
+      }
+
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'active',
+      key: 'active',
+      width: 150,
+      render: (active) => (
+        <Tag color={active !== false ? "success" : "error"}>
+          {active !== false ? "Đang hoạt động" : "Ngừng hoạt động"}
+        </Tag>
+      ),
+    },
+    {
+      title: 'Hành động',
+      key: 'action',
+      width: 120,
+      fixed: 'right',
+      render: (_, record) => (
+        <Space size="middle">
+          <Tooltip title="Chỉnh sửa">
+            <a onClick={() => handleEdit(record)} className="text-blue-600 hover:text-blue-800">
+              <EditOutlined className="text-lg" />
+            </a>
           </Tooltip>
-        ) : (
-          <Text type="secondary">Chưa cập nhật</Text>
-        );
-      },
+          <Tooltip title="Xóa">
+            <a onClick={() => handleDelete(record)} className="text-red-600 hover:text-red-800">
+              <DeleteOutlined className="text-lg" />
+            </a>
+          </Tooltip>
+        </Space>
+      ),
     },
   ];
 
@@ -304,7 +331,7 @@ export default function TeachersPage() {
               total: pagination.total,
               showSizeChanger: true,
               showQuickJumper: true,
-              pageSizeOptions: ['4', '10', '20', '50'], 
+              pageSizeOptions: ['4', '10', '20', '50'],
               showTotal: (total) => `Tổng ${total} giáo viên`,
             }}
             onChange={handleTableChange}

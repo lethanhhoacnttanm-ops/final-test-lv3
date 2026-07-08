@@ -10,7 +10,6 @@ const Mainlayout = () => {
     const location = useLocation();
     const navigate = useNavigate();
 
-    // Tự động lấy thẻ active dựa theo URL hiện tại của react-router-dom
     const currentPath = location.pathname === '/' ? 'teachers' : location.pathname.replace('/', '');
 
     const menuItems = [
@@ -20,7 +19,6 @@ const Mainlayout = () => {
             label: 'Danh sách Giáo viên',
         },
         {
-            // SỬA TẠI ĐÂY: Đổi key trùng khớp với path trong App.jsx
             key: 'list-teacher-position',
             icon: <BankOutlined style={{ fontSize: '16px' }} />,
             label: 'Vị trí công tác',
@@ -60,7 +58,6 @@ const Mainlayout = () => {
                     </div>
                 </div>
 
-                {/* Danh sách Menu điều hướng */}
                 <div className="px-3 py-4 flex-1 overflow-y-auto custom-scrollbar">
                     <Menu
                         theme="dark"
@@ -74,9 +71,7 @@ const Mainlayout = () => {
                 </div>
             </aside>
 
-            {/* Khu vực nội dung bên phải */}
             <div className="flex-1 min-w-0 bg-slate-50/50 flex flex-col h-full overflow-hidden">
-                {/* Thanh Header trên cùng - Đã loại bỏ style đổ bóng thủ công */}
                 <header className="bg-white px-8 flex items-center border-b border-slate-100 w-full h-16 sticky top-0 z-10 shadow-sm shadow-slate-100/40">
                     <div className="flex items-center justify-between w-full">
                         <div className="text-slate-800 font-bold text-lg tracking-tight">
@@ -88,7 +83,6 @@ const Mainlayout = () => {
                     </div>
                 </header>
 
-                {/* Nội dung trang con (TeachersPage hoặc ListTeacherPosition) */}
                 <main className="p-6 w-full flex-1 min-w-0 flex flex-col overflow-y-auto">
                     <div className="w-full flex-1 min-w-0">
                         <Outlet />
