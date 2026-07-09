@@ -13,11 +13,14 @@ import {
   Typography,
   Tooltip,
   Spin,
-  Drawer,
+  Modal,
   Row,
   Col,
+  Upload
 } from 'antd';
 import {
+  PictureOutlined,
+  UploadOutlined,
   DeleteOutlined,
   ApartmentOutlined,
   IdcardOutlined,
@@ -46,6 +49,8 @@ export default function TeachersPage() {
   const [globalActiveCount, setGlobalActiveCount] = useState(0);
   const [globalInactiveCount, setGlobalInactiveCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [editingTeacherId, setEditingTeacherId] = useState(null);
 
   const [pagination, setPagination] = useState({
     current: 1,
@@ -103,38 +108,107 @@ export default function TeachersPage() {
 
   const handleCreate = async (values) => {
     setSubmitting(true);
-
-    const dataPost = {
-      code: `GV${Math.floor(1000 + Math.random() * 9000)}`,
-      userDetail: {
-        name: values.name,
-        email: values.email,
-        address: values.address || '',
-      },
-      phone: values.phone || '',
-      isActive: values.status === 'active' ? true : false,
-      teacherPositions: values.position_id ? [values.position_id] : [],
-      degrees: [
-        {
-          type: values.education_level || '',
-          major: values.education_school || '',
-          isGraduated: true
-        }
-      ]
-    };
+    let uploadedImageUrl = previewUrl;
 
     try {
-      await axios.post("http://localhost:8080/teachers", dataPost);
-      message.success('Thêm giáo viên thành công');
+      if (values.avatar && values.avatar[0]?.originFileObj) {
+        const imgFormData = new FormData();
+        imgFormData.append('image', values.avatar[0].originFileObj);
+
+        const uploadRes = await axios.post("http://localhost:8080/teachers/upload", imgFormData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        uploadedImageUrl = uploadRes.data.fileUrl;
+      }
+
+      const dataPost = {
+        name: values.name,
+        email: values.email,
+        phoneNumber: values.phone || '',
+        address: values.address || '',
+        identity: values.identity || '',
+        image: uploadedImageUrl,
+        dob: values.dob ? values.dob.toISOString() : new Date().toISOString(),
+        teacherPositions: values.position_id ? [values.position_id] : [],
+        degrees: [
+          {
+            type: values.education_level || '',
+            school: values.education_school || '',
+            major: values.education_major || '',
+            year: values.education_graduate || '',
+            isGraduated: true
+          }
+        ]
+      };
+
+      if (editingTeacherId) {
+        await axios.put(`http://localhost:8080/teachers/${editingTeacherId}`, dataPost);
+        message.success('Cập nhật thông tin giáo viên thành công');
+      } else {
+        await axios.post("http://localhost:8080/teachers", dataPost);
+        message.success('Thêm giáo viên mới thành công');
+      }
       setModalOpen(false);
       form.resetFields();
-      fetchTeachersData(1, pagination.pageSize);
+      setPreviewUrl('');
+      fetchTeachersData(pagination.currentPage, pagination.pageSize);
     } catch (error) {
-      console.error("Lỗi từ server:", error.response?.data || error.message);
-      message.error('Không thể tạo giáo viên mới');
+      console.error("Lỗi:", error.response?.data || error.message);
+      message.error(error.response?.data?.message || 'Không thể tạo giáo viên mới');
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const showCreateModal = () => {
+    setEditingTeacherId(null); 
+    form.resetFields();        
+    setPreviewUrl('');         
+    setModalOpen(true);      
+  };
+
+  const handleEdit = (record) => {
+    setEditingTeacherId(record._id);
+
+    setModalOpen(true);
+
+    form.setFieldsValue({
+      id: record._id,
+      name: record.userDetail?.name,
+      email: record.userDetail?.email,
+      phone: record.userDetail?.phoneNumber,
+      address: record.userDetail?.address,
+      identity: record.userDetail?.identity,
+      status: record.isActive ? 'active' : 'inactive',
+      position_id: record.teacherPositions?.[0],
+      education_level: record.degrees?.[0]?.type,
+      education_school: record.degrees?.[0]?.school,
+    });
+
+    if (record.image) {
+      setPreviewUrl(record.image);
+    }
+  };
+
+  const handleDelete = (record) => {
+    Modal.confirm({
+      title: 'Xác nhận xóa',
+      content: `Bạn có chắc chắn muốn xóa giáo viên ${record.userDetail?.name || ''} không?`,
+      okText: 'Xóa',
+      okType: 'danger',
+      cancelText: 'Hủy',
+      onOk: async () => {
+        try {
+          await axios.delete(`http://localhost:8080/teachers/${record._id}`);
+
+          message.success('Xóa giáo viên thành công');
+          fetchTeachersData(pagination.currentPage, pagination.pageSize);
+        } catch (error) {
+          console.error("Lỗi xóa giáo viên:", error);
+          message.error(error.response?.data?.message || 'Không thể xóa giáo viên');
+        }
+      },
+    });
   };
 
   const getDegreeConfig = (degreeType) => {
@@ -175,7 +249,7 @@ export default function TeachersPage() {
         return (
           <Space align="start" size="middle">
             <Avatar
-              src={record.avatar}
+              src={record.image}
               icon={<UserOutlined />}
               size={48}
               className="shadow-sm"
@@ -250,9 +324,9 @@ export default function TeachersPage() {
         const user = record.userDetail
         return (
           (
-            <Tooltip title={user.email}>
+            <Tooltip title={user.address}>
               <Paragraph ellipsis={{ rows: 2 }} className="m-0 text-sm">
-                {user.email}
+                {user.address}
               </Paragraph>
             </Tooltip>
           )
@@ -293,6 +367,30 @@ export default function TeachersPage() {
     },
   ];
 
+  const normFile = (e) => {
+    if (Array.isArray(e)) return e;
+    return e?.fileList;
+  };
+
+  const beforeUpload = (file) => {
+    const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png' || file.type === 'image/webp';
+    if (!isJpgOrPng) {
+      message.error('Bạn chỉ có thể upload định dạng JPG/PNG/WebP!');
+      return Upload.LIST_IGNORE;
+    }
+
+    const isLt2M = file.size / 1024 / 1024 < 2;
+    if (!isLt2M) {
+      message.error('Kích thước ảnh phải nhỏ hơn 2MB!');
+      return Upload.LIST_IGNORE;
+    }
+
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+
+    return false;
+  };
+
   return (
     <div className="p-6">
       <Card className="shadow-lg">
@@ -312,7 +410,7 @@ export default function TeachersPage() {
                 <Button icon={<ReloadOutlined />} onClick={() => fetchTeachersData(pagination.current, pagination.pageSize)}>
                   Làm mới
                 </Button>
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => setModalOpen(true)}>
+                <Button type="primary" icon={<PlusOutlined />} onClick={showCreateModal}>
                   Thêm giáo viên
                 </Button>
               </Space>
@@ -341,21 +439,59 @@ export default function TeachersPage() {
         </Spin>
       </Card>
 
-      <Drawer
-        title="Thêm giáo viên mới"
+      <Modal
+        title={editingTeacherId ? "Chỉnh sửa thông tin Giáo viên" : "Tạo Giáo viên mới"}
         placement="right"
         size={500}
         onClose={() => setModalOpen(false)}
+        onCancel={() => setModalOpen(false)}
         open={modalOpen}
-        destroyOnClose
+        footer={null}
       >
         <Form form={form} layout="vertical" onFinish={handleCreate} requiredMark="optional">
+          <Form.Item
+            name="avatar"
+            label="Ảnh đại diện (Avatar)"
+            valuePropName="fileList"
+            getValueFromEvent={normFile}
+            rules={[{ required: true, message: 'Vui lòng chọn ảnh đại diện!' }]}
+          >
+            <Upload
+              maxCount={1}
+              listType="picture"
+              accept="image/*"
+              beforeUpload={beforeUpload}
+              onRemove={() => setPreviewUrl('')}
+            >
+              <Button icon={<UploadOutlined />} className="w-full rounded-xl py-4 flex items-center justify-center font-medium border-dashed border-gray-300">
+                Select Product File
+              </Button>
+            </Upload>
+          </Form.Item>
+          <div className="flex items-center gap-3 bg-white p-2 rounded-lg border border-gray-200/60">
+            <Avatar
+              size={44}
+              shape="square"
+              src={previewUrl || teachers?.image}
+              icon={<PictureOutlined />}
+              className="rounded-lg! border border-gray-100 bg-gray-50 shadow-3xs object-cover"
+            />
+            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Image Preview</span>
+          </div>
           <Form.Item
             name="name"
             label="Họ và tên"
             rules={[{ required: true, message: 'Vui lòng nhập họ và tên' }]}
           >
             <Input prefix={<UserOutlined />} placeholder="Nhập họ và tên" size="large" />
+          </Form.Item>
+
+          <Form.Item
+            name="identity"
+            label="CCCD"
+            rules={[{ required: true, message: 'Vui lòng nhập CCCD' }]}
+          >
+            <Input prefix={<IdcardOutlined />} placeholder="Nhập CCCD" size="large" />
           </Form.Item>
 
           <Form.Item
@@ -393,19 +529,18 @@ export default function TeachersPage() {
               ))}
             </Select>
           </Form.Item>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="education_level" label="Trình độ (Bậc)">
-                <Input placeholder="VD: Thạc sĩ, Tiến sĩ" size="large" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="education_school" label="Chuyên Ngành">
-                <Input placeholder="Tên chuyên ngành học" size="large" />
-              </Form.Item>
-            </Col>
-          </Row>
+          <Form.Item name="education_level" label="Trình độ (Bậc)">
+            <Input placeholder="VD: Thạc sĩ, Tiến sĩ" size="large" />
+          </Form.Item>
+          <Form.Item name="education_major" label="Chuyên Ngành">
+            <Input placeholder="Tên chuyên ngành học" size="large" />
+          </Form.Item>
+          <Form.Item name="education_school" label="Trường">
+            <Input placeholder="VD: Đại học..." size="large" />
+          </Form.Item>
+          <Form.Item name="education_graduate" label="Tốt nghiệp">
+            <Input placeholder="Năm bao nhiêu" size="large" />
+          </Form.Item>
 
           <Form.Item className="mb-0">
             <Space className="w-full justify-end">
@@ -416,7 +551,7 @@ export default function TeachersPage() {
             </Space>
           </Form.Item>
         </Form>
-      </Drawer>
+      </Modal>
     </div>
   );
 }

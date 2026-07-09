@@ -37,7 +37,7 @@ export default function PositionsPage() {
     try {
       const response = await axios.get("http://localhost:8080/teacher-positions");
       const result = response.data?.data || [];
-      
+
       setPositions(result);
     } catch (error) {
       console.error("Error from server:", error);
@@ -53,12 +53,12 @@ export default function PositionsPage() {
 
   const handleCreate = async (values) => {
     setSubmitting(true);
-    
+
     const dataPost = {
       code: values.code,
       name: values.name,
       description: values.description || '',
-      active: true 
+      active: true
     };
 
     try {
@@ -66,7 +66,7 @@ export default function PositionsPage() {
       message.success('Tạo vị trí công tác thành công');
       setModalOpen(false);
       form.resetFields();
-      fetchPositions(); 
+      fetchPositions();
     } catch (error) {
       console.error("Lỗi từ server:", error.response?.data || error.message);
       message.error('Không thể tạo vị trí công tác mới');
@@ -76,6 +76,19 @@ export default function PositionsPage() {
   };
 
   const columns = [
+    {
+      title: 'STT',
+      key: 'stt',
+      width: 60,
+      render: (_, __, index) => {
+        const count = index + 1
+        return (
+          <Tag className="font-mono">
+            {`${count}`}
+          </Tag>
+        )
+      }
+    },
     {
       title: 'Mã vị trí',
       dataIndex: 'code',
@@ -100,6 +113,17 @@ export default function PositionsPage() {
       ),
     },
     {
+      title: 'Trạng thái',
+      dataIndex: 'active',
+      key: 'active',
+      width: 150,
+      render: (active) => (
+        <Tag color={active !== false ? "success" : "error"}>
+          {active !== false ? "Đang hoạt động" : "Ngừng hoạt động"}
+        </Tag>
+      )
+    },
+    {
       title: 'Mô tả',
       dataIndex: 'description',
       key: 'description',
@@ -114,17 +138,6 @@ export default function PositionsPage() {
         ) : (
           <Text type="secondary">-</Text>
         ),
-    },
-    {
-      title: 'Trạng thái',
-      dataIndex: 'active',
-      key: 'active',
-      width: 150,
-      render: (active) => (
-        <Tag color={active !== false ? "success" : "error"}>
-          {active !== false ? "Đang hoạt động" : "Ngừng hoạt động"}
-        </Tag>
-      )
     }
   ];
 

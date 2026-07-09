@@ -57,6 +57,11 @@ const teacherSchema = new mongoose.Schema(
         unique: true
     },
 
+    image: { 
+        type: String, 
+        required: true 
+    },
+
     startDate: {
         type: Date
     },
